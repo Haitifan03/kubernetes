@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jackett
+  namespace: default
+  labels:
+    app: jackett
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jackett
+  template:
+    metadata:
+      labels:
+        app: jackett
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: bedroom
+      containers:
+        - name: jackett
+          image: lscr.io/linuxserver/jackett:latest
+          ports:
+            - containerPort: 9117
+              name: http
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "America/Indiana/Indianapolis"
+          volumeMounts:
+            - name: config-folder
+              mountPath: /config
+      volumes:
+        - name: config-folder
+          hostPath:
+            path: /home/samuel/jackett/config
+            type: Directory
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jackett-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: jackett
+  ports:
+    - port: 9117
+      targetPort: 9117
+      name: http
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jackett-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - samuelwgross.com
+      secretName: general-tls
+  rules:
+    - host: jackett.samuelwgross.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jackett-service
+                port:
+                  number: 9117

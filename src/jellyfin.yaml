@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  namespace: default
+  labels:
+    app: jellyfin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jellyfin
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: bedroom
+      containers:
+        - name: jellyfin
+          image: jellyfin/jellyfin:latest
+          ports:
+            - containerPort: 8096
+              name: http
+          volumeMounts:
+            # Mount the host media folder inside the container at /media
+            - name: media-folder
+              mountPath: /media
+            # Mount the persistent config folder from Ubuntu
+            - name: config-folder
+              mountPath: /config
+            # Mount the cache folder
+            - name: cache-folder
+              mountPath: /cache
+      volumes:
+        # Host path for media
+        - name: media-folder
+          hostPath:
+            path: /Network_Share/Media
+            type: Directory
+        # Host path for persistent configuration
+        - name: config-folder
+          hostPath:
+            path: /home/samuel/jellyfin/config
+            type: Directory
+        # Host path for cache
+        - name: cache-folder
+          hostPath:
+            path: /home/samuel/jellyfin/cache
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyfin-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: jellyfin
+  ports:
+    - port: 8096
+      targetPort: 8096
+      name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jellyfin-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - samuelwgross.com
+      secretName: general-tls
+  rules:
+    - host: jellyfin.samuelwgross.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jellyfin-service
+                port:
+                  number: 8096
