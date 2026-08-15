@@ -1,0 +1,227 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-server
+  namespace: default
+  labels:
+    app: immich-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: immich-server
+  template:
+    metadata:
+      labels:
+        app: immich-server
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: bedroom
+      containers:
+        - name: immich-server
+          image: ghcr.io/immich-app/immich-server:release
+          ports:
+            - containerPort: 2283
+              name: http
+          env:
+            - name: DB_HOSTNAME
+              value: immich-postgres
+            - name: DB_USERNAME
+              value: samuel
+            - name: DB_PASSWORD
+              value: lucas
+            - name: DB_DATABASE_NAME
+              value: immich
+            - name: REDIS_HOSTNAME
+              value: immich-redis
+          volumeMounts:
+            - name: upload-folder
+              mountPath: /data
+      volumes:
+        - name: upload-folder
+          hostPath:
+            path: /users/samuel/immich/upload-folder
+            type: DirectoryOrCreate
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-machine-learning
+  namespace: default
+  labels:
+    app: immich-machine-learning
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: immich-machine-learning
+  template:
+    metadata:
+      labels:
+        app: immich-machine-learning
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: bedroom
+      containers:
+        - name: immich-machine-learning
+          image: ghcr.io/immich-app/immich-machine-learning:release
+          ports:
+            - containerPort: 3003
+              name: http
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-machine-learning
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: immich-machine-learning
+  ports:
+    - port: 3003
+      targetPort: 3003
+      name: http
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-server
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: immich-server
+  ports:
+    - port: 2283
+      targetPort: 2283
+      name: http
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-postgres
+  namespace: default
+  labels:
+    app: immich-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: immich-postgres
+  template:
+    metadata:
+      labels:
+        app: immich-postgres
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: bedroom
+      containers:
+        - name: postgres
+          image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+          env:
+            - name: POSTGRES_USER
+              value: samuel
+            - name: POSTGRES_PASSWORD
+              value: lucas
+            - name: POSTGRES_DB
+              value: immich
+          ports:
+            - containerPort: 5432
+              name: postgres
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-data
+          hostPath:
+            path: /home/samuel/immich/postgres
+            type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-postgres
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: immich-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgres
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-redis
+  namespace: default
+  labels:
+    app: immich-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: immich-redis
+  template:
+    metadata:
+      labels:
+        app: immich-redis
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: bedroom
+      containers:
+        - name: redis
+          image: redis:6.2-alpine
+          ports:
+            - containerPort: 6379
+              name: redis
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: immich-redis
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: immich-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: redis
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: immich-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - immich.samuelwgross.com
+      secretName: general-tls
+  rules:
+    - host: immich.samuelwgross.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: immich-server
+                port:
+                  number: 2283
