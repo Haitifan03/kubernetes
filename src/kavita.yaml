@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kavita
+  namespace: default
+  labels:
+    app: kavita
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kavita
+  template:
+    metadata:
+      labels:
+        app: kavita
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: bedroom
+      containers:
+        - name: kavita
+          image: jvmilazz0/kavita:latest
+          ports:
+            - containerPort: 5000
+              name: http
+          volumeMounts:
+            # Mount the host media/manga/e-books folder
+            - name: media-folder
+              mountPath: /manga
+            # Mount the persistent config folder
+            - name: config-folder
+              mountPath: /kavita/config
+      volumes:
+        # Host path for media / books
+        - name: media-folder
+          hostPath:
+            path: /Network_Share/Media/Manga
+            type: Directory
+        # Host path for persistent configuration
+        - name: config-folder
+          hostPath:
+            path: /home/samuel/kavita/config
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kavita-service
+spec:
+  type: ClusterIP
+  selector:
+    app: kavita
+  ports:
+    - port: 5000
+      targetPort: 5000
+      name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kavita-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - kavita.samuelwgross.com
+      secretName: general-tls
+  rules:
+    - host: kavita.samuelwgross.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kavita-service
+                port:
+                  number: 5000
