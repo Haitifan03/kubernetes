@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audiobookshelf
+  namespace: default
+  labels:
+    app: audiobookshelf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: audiobookshelf
+  template:
+    metadata:
+      labels:
+        app: audiobookshelf
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: bedroom
+      containers:
+        - name: audiobookshelf
+          image: ghcr.io/advplyr/audiobookshelf:latest
+          ports:
+            - containerPort: 80
+              name: http
+          volumeMounts:
+            # Mount the host audiobooks / podcasts media folder
+            - name: media-folder
+              mountPath: /audiobooks
+            # Mount the persistent config folder
+            - name: config-folder
+              mountPath: /config
+            # Mount the persistent metadata folder
+            - name: metadata-folder
+              mountPath: /metadata
+      volumes:
+        # Host path for media / audiobooks
+        - name: media-folder
+          hostPath:
+            path: /Network_Share/Media/Audiobooks
+            type: Directory
+        # Host path for persistent configuration
+        - name: config-folder
+          hostPath:
+            path: /home/samuel/audiobookshelf/config
+            type: Directory
+        # Host path for persistent metadata
+        - name: metadata-folder
+          hostPath:
+            path: /home/samuel/audiobookshelf/metadata
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: audiobookshelf-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: audiobookshelf
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: audiobookshelf-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - audiobookshelf.samuelwgross.com
+      secretName: general-tls
+  rules:
+    - host: audiobookshelf.samuelwgross.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: audiobookshelf-service
+                port:
+                  number: 80
