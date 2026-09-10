@@ -33,9 +33,6 @@ spec:
             - containerPort: 3333
               protocol: TCP
               name: web-admin
-            - containerPort: 3000
-              protocol: TCP
-              name: initial-setup
           volumeMounts:
             - name: adguard-conf
               mountPath: /opt/adguardhome/conf
@@ -73,10 +70,6 @@ spec:
       protocol: TCP
       targetPort: 3333
       name: web-admin
-    - port: 3000
-      targetPort: 3000
-      name: initial-setup
-
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
