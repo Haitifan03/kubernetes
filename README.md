@@ -24,10 +24,10 @@ Once connected to the cloudflared one client, run
 ssh samuel@192.168.0.102
 ```
 
-This project will be saved under /users/samuel/manifests, so to update the manifests before applying them, simply run
+This project will be saved under /users/samuel/kubernetes, so to update the manifests before applying them, simply run
 
 ```bash
-cd ~/manifests
+cd ~/kubernetes
 git pull
 ```
 
