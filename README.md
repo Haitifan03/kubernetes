@@ -1,7 +1,7 @@
 # Welcome Fellows
 
 ## Purpose
-This repository is home to the configuration files for Samuel Gross' personal kubernetes cluster. 
+This repository is home to the configuration files for a personal kubernetes cluster. 
 
 The primary purpose of the cluster is to replace paid services, such as streaming platforms, cloud storage, and ad blockers with locally run, open source solutions.
 
