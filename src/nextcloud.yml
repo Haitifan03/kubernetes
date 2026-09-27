@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud
+  namespace: default
+  labels:
+    app: nextcloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: bedroom
+      containers:
+        - name: nextcloud
+          image: nextcloud:latest
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            # Nextcloud URL
+            - name: NEXTCLOUD_TRUSTED_DOMAINS
+              value: "nextcloud.samuelwgross.com"
+
+            # Existing PostgreSQL server
+            - name: POSTGRES_HOST
+              value: "postgres-service"
+            - name: POSTGRES_DB
+              value: "homelab"
+            - name: POSTGRES_USER
+              value: "samuel"
+            - name: POSTGRES_PASSWORD
+              value: "mattermostpassword"
+
+            # Keep Nextcloud's tables separate from Mattermost/etc.
+            - name: NEXTCLOUD_TABLE_PREFIX
+              value: "nc_"
+
+            # Automatically create the initial admin account
+            - name: NEXTCLOUD_ADMIN_USER
+              value: "samuel"
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              value: "CHANGE_THIS_PASSWORD"
+
+            # Store uploaded files here
+            - name: NEXTCLOUD_DATA_DIR
+              value: "/var/www/html/data"
+
+          volumeMounts:
+            - name: nextcloud-data
+              mountPath: /var/www/html
+
+      volumes:
+        - name: nextcloud-data
+          hostPath:
+            path: /home/samuel/nextcloud
+            type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: nextcloud
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nextcloud-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - nextcloud.samuelwgross.com
+      secretName: general-tls
+  rules:
+    - host: nextcloud.samuelwgross.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nextcloud-service
+                port:
+                  number: 80
