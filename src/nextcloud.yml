@@ -32,21 +32,17 @@ spec:
             - name: POSTGRES_HOST
               value: "postgres-service"
             - name: POSTGRES_DB
-              value: "homelab"
+              value: "nextcloud"
             - name: POSTGRES_USER
-              value: "samuel"
+              value: "nextcloud"
             - name: POSTGRES_PASSWORD
-              value: "mattermostpassword"
-
-            # Keep Nextcloud's tables separate from Mattermost/etc.
-            - name: NEXTCLOUD_TABLE_PREFIX
-              value: "nc_"
+              value: "WUBBA_LUBBA_DUB_DUB"
 
             # Automatically create the initial admin account
             - name: NEXTCLOUD_ADMIN_USER
               value: "samuel"
             - name: NEXTCLOUD_ADMIN_PASSWORD
-              value: "CHANGE_THIS_PASSWORD"
+              value: "WUBBA_LUBBA_DUB_DUB"
 
             # Store uploaded files here
             - name: NEXTCLOUD_DATA_DIR
