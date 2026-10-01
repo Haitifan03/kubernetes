@@ -42,8 +42,8 @@ spec:
                     strpos($_SERVER['HTTP_X_FORWARDED_PROTO'], 'https') !== false) {
                     $_SERVER['HTTPS'] = 'on';
                 }
-                define('WP_HOME', 'https://wordpress.samuelwgross.com');
-                define('WP_SITEURL', 'https://wordpress.samuelwgross.com');
+                define('WP_HOME', 'http://stevegrossblog.com');
+                define('WP_SITEURL', 'http://stevegrossblog.com');
           volumeMounts:
             - name: wordpress-data
               mountPath: /var/www/html
