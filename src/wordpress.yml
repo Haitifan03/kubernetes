@@ -73,15 +73,15 @@ metadata:
   name: wordpress-ingress
   namespace: default
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - wordpress.samuelwgross.com
-      secretName: general-tls
+        - stevegrossblog.com
+      secretName: dad-tls
   rules:
-    - host: wordpress.samuelwgross.com
+    - host: stevegrossblog.com
       http:
         paths:
           - path: /
